@@ -79,42 +79,49 @@
 
   <script>
 
-      getElem("paste-json").addEventListener("click", pasteJsonString);
+      // getElem("paste-json").addEventListener("click", pasteJsonString);
+      
+      //add listeners
+      getElem("drop-json-text").addEventListener("change", function(){
+          processErroredSaleJson(JSON.parse(this.value));
+      });
 
       function getElem(id) {
         return document.getElementById(id);
       }
 
-      function pasteJsonString() {
-        var cb = new ClipboardEvent('paste');
-          var jsonString = cb.clipboardData.getData('Text');
-          temp = getElem("temp");
-
-          temp.focus();
-          document.execCommand("paste");
-
-
-          console.log(temp.value);
-      }
-
+      
       function dropJSON(targetEl, callback) {
         // disable default drag & drop functionality
         targetEl.addEventListener('dragenter', function(e){ e.preventDefault(); });
         targetEl.addEventListener('dragover',  function(e){ e.preventDefault(); });
 
         targetEl.addEventListener('drop', function(event) {
-
-            //TODO: CHECK WHETHER THE DROP IS TEXT OR File
-            // ALSO HAVE TO DECIDE WHETHER THE TEXT CAN BE COPY/PASTED
-
+        
+            dataTransfer = event.dataTransfer;
+            
             var reader = new FileReader();
-            reader.onloadend = function() {
+            reader.onloadend = function() {                
+                if (this.result)
                 var data = JSON.parse(this.result);
                 callback(data);
             };
-
-            reader.readAsText(event.dataTransfer.files[0]);
-            event.preventDefault();
+            
+            //either drag drop of json file or json string
+            //switch for minimal optimisation
+            switch(dataTransfer.files.length) {
+                case 0:
+                    // drag and drop json string, for ipad errored sales
+                    callback(JSON.parse(dataTransfer.getData('Text')));
+                    break;
+                case 1:
+                    // file dropped no error checking at the moment
+                    // assumes valid json file
+                    reader.readAsText(dataTransfer.files[0]);
+                    break;
+            }
+            
+            event.preventDefault(); 
         });
       }
 
@@ -122,10 +129,19 @@
         getElem("drop-json-text"),
         function(data) {
             // dropped - do something with data
-            console.log(data.domainPrefix);
+           console.log("in dropjson");
+           processErroredSaleJson(data);
         }
       );
 
+      function processErroredSaleJson(data) {
+          console.log(data);
+          getElem("drop-json-text").innerHTML = data;
+      }
+
+      function getJson(jsonString) {
+          return JSON.parse(jsonString);
+      }
 
   </script>
 </body>
