@@ -23,10 +23,9 @@
         border: 2px solid black;
 
       }
-      #json-output {
+      #agent-actions {
         border: 2px solid black;
-        width: 300px;
-        height: 300px;
+        width: 50%;
       }
       #suggest-actions {
         border: 2px solid black;
@@ -41,6 +40,13 @@
         resize: none;
       }
 
+      ::-webkit-input-placeholder {
+        color: #41B04B;
+        font-size: 3em;
+        font-style: italic;
+        padding-top: 2em;
+      }
+      
       #paste-json {
         position: absolute;
         margin-bottom: 1em;
@@ -56,6 +62,10 @@
         overflow-y: auto;
         padding-top: 2em;
       }
+      
+      div {
+          margin: 1em;
+      }
 
   </style>
 
@@ -68,9 +78,9 @@
 
   <div class="main-container">
     <div id="drop-json">
-      <textarea id="drop-json-text"></textarea>
+      <textarea id="drop-json-text" placeholder="DRAG AND DROP JSON FILE OR TEXT"></textarea>
     </div>
-    <div id="json-output"></div>
+    <div id="agent-actions"></div>
     <div id="suggest-actions"></div>
   </div>
 
@@ -95,7 +105,7 @@
         // disable default drag & drop functionality
         targetEl.addEventListener('dragenter', function(e){ e.preventDefault(); });
         targetEl.addEventListener('dragover',  function(e){ e.preventDefault(); });
-
+      
         targetEl.addEventListener('drop', function(event) {
         
             dataTransfer = event.dataTransfer;
@@ -136,12 +146,164 @@
 
       function processErroredSaleJson(data) {
           console.log(data);
-          getElem("drop-json-text").innerHTML = data;
+          
+          retailer = {
+              domain: data.domainPrefix,
+              id: data.retailerId
+          };
+          
+          eSales = data.erroredSales; //this is an array
+          
+          saleData = {
+              payments : [],
+              receiptNumberDetails : [],
+              customer_id : [],
+              displayStatus : [],
+              lineItems: []
+          };
+          
+          
+          
+          eSales.forEach(function(sale) {
+              Object.keys(saleData).forEach(function(key) {
+                  saleData[key].push(sale[key]); // for easier manipulation if there are more than 1 errored sale in json
+              });
+          });
+          
+          processDataToPage(saleData, retailer);
+          
+          console.log(saleData);
+          
+          //MOST OF THESE ARE ARRAYS AS THEY CAN HAVE MORE THAN ONE SALE, PAYMENT ETC.
       }
 
       function getJson(jsonString) {
           return JSON.parse(jsonString);
       }
+      
+    function processDataToPage(saleData, retailer) {
+          processRetailerInfo(retailer);
+          
+          //process agent action suggestions
+          processAgentActions(saleData);
+          
+          //process sale info
+          
+          
+          //process products
+          
+          
+          //process payments
+    }
+    
+    var terms = {
+        "payments" : "Payments",
+        "receiptnumberdetails" : "Receipt Details",
+        "cutomer_id" : "Customer Details",
+        "displaystatus": "Invoice Status",
+        "lineitems" : "Products"            
+    };
+    
+    function processAgentActions(saleData) {
+        var actions = {};
+        var keys = getKeys(saleData);
+       
+        
+        for (var key in saleData) {
+            var action;
+            var upperKey = key.toString().toUpperCase();
+            console.log(key);
+            switch (saleData[key].length) {
+                case 0:                    
+                    action = upperKey + " do not exist in this sale.";
+                    break;
+                default:
+                    //these arrays are actually storing each errored sales data
+                    //NEED TO FIGURE OUT LOGIC SO THAT IT ACCOUNTS FOR THE CORRECT SALE
+                    //SIMPLE ARRAY POSITION DEPICTS THE SALE
+                    action = upperKey + " exist in this errored sale. Please see " + upperKey + " section for more details.";
+                    break;
+                
+            }
+            
+            actions[key] = action;
+        }
+        
+        displayActions(actions, keys);        
+    }
+    
+    function displayActions(actions) {
+        //actions expect dict
+        var ul = document.createElement("ul");
+        
+        for (var action in actions) {
+            var li = document.createElement("li");
+            
+            li.appendChild(document.createTextNode(actions[action]));
+            ul.appendChild(li);
+        }
+        
+        getElem("agent-actions").append(ul);
+    }
+    
+    function processRetailerInfo(retailer) {
+        var labels = getKeys(retailer);
+        var values = getValues(retailer);
+        
+        var table = createTable("retailer", labels, values);
+        console.log(table);
+        //getElem('').appendChild(table);
+    }
+    
+    function getValues(dict) {
+        var values = [];
+        
+        for (var key in dict) {
+            values.push(dict[key]);
+        }
+        
+        return values;
+    }
+    
+    function getKeys(dict) {
+        return Object.keys(dict);
+    }
+    
+    function createTable(name, labels, values){
+    
+        var table = document.createElement("table");
+
+        var cellNum = 0;
+        for (var i = 0; i < labels.length; i++){
+            var row = document.createElement("tr");
+            var td = document.createElement("td");
+            var text = document.createTextNode(labels[i]);
+            
+            td.appendChild(text);
+            row.appendChild(td);
+
+            var valTd = document.createElement("td");
+            var valText = document.createTextNode(values[i]);
+            
+            valTd.appendChild(valText);
+            
+            row.appendChild(valTd);
+            /*for (var cell = 0; cell < values.length; cell++){
+                var td = document.createElement("td");
+                row.appendChild(td);
+                
+                //to refer each cells with cell number
+                //val is there to distinguish mainboard cells and inner cells
+                td.value = val+cellNum; 
+                //console.log(td.value);
+                cellNum++;
+            }*/
+
+            table.appendChild(row);
+        }
+        table.className = name;
+        return table;
+    }
 
   </script>
 </body>
