@@ -1,0 +1,132 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Vend Errored Sales</title>
+
+  <style>
+      .main-container {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row;
+        justify-content: space-around;
+        align-content:space-between;
+
+      }
+
+      #drop-json {
+        position: relative;
+        width: 300px;
+        height: 300px;
+        border: 2px solid black;
+
+      }
+      #json-output {
+        border: 2px solid black;
+        width: 300px;
+        height: 300px;
+      }
+      #suggest-actions {
+        border: 2px solid black;
+        width: 300px;
+        height: 300px;
+      }
+
+      #drop-json-text {
+        height: 100%;
+        width:100%;
+        box-sizing: border-box;
+        resize: none;
+      }
+
+      #paste-json {
+        position: absolute;
+        margin-bottom: 1em;
+        bottom: 0;
+      }
+
+      #drop-json p {
+        width: 100%;
+        text-align: center;
+        line-height: 1.5em;
+        opacity: .3;
+        font-size: 2em;
+        overflow-y: auto;
+        padding-top: 2em;
+      }
+
+  </style>
+
+</head>
+
+<body>
+  <header>
+      <h1>Vend Errored Sale Processor</h1>
+  </header>
+
+  <div class="main-container">
+    <div id="drop-json">
+      <textarea id="drop-json-text"></textarea>
+    </div>
+    <div id="json-output"></div>
+    <div id="suggest-actions"></div>
+  </div>
+
+  <textarea style="display:none" id='temp'></textarea>
+
+
+  <script>
+
+      getElem("paste-json").addEventListener("click", pasteJsonString);
+
+      function getElem(id) {
+        return document.getElementById(id);
+      }
+
+      function pasteJsonString() {
+        var cb = new ClipboardEvent('paste');
+          var jsonString = cb.clipboardData.getData('Text');
+          temp = getElem("temp");
+
+          temp.focus();
+          document.execCommand("paste");
+
+
+          console.log(temp.value);
+      }
+
+      function dropJSON(targetEl, callback) {
+        // disable default drag & drop functionality
+        targetEl.addEventListener('dragenter', function(e){ e.preventDefault(); });
+        targetEl.addEventListener('dragover',  function(e){ e.preventDefault(); });
+
+        targetEl.addEventListener('drop', function(event) {
+
+            //TODO: CHECK WHETHER THE DROP IS TEXT OR File
+            // ALSO HAVE TO DECIDE WHETHER THE TEXT CAN BE COPY/PASTED
+
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                var data = JSON.parse(this.result);
+                callback(data);
+            };
+
+            reader.readAsText(event.dataTransfer.files[0]);
+            event.preventDefault();
+        });
+      }
+
+      dropJSON(
+        getElem("drop-json-text"),
+        function(data) {
+            // dropped - do something with data
+            console.log(data.domainPrefix);
+        }
+      );
+
+
+  </script>
+</body>
+</html>
