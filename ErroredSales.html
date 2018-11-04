@@ -7,11 +7,16 @@
   <title>Vend Errored Sales</title>
 
   <style>
+      body{ font-family: sans-serif, "Calibri"; }
+      header {
+          margin: auto;
+          text-align: center;
+      }
       .main-container {
         display: flex;
         flex-wrap: wrap;
         flex-direction: row;
-        justify-content: space-around;
+        justify-content: flex-end;
         align-content:space-between;
 
       }
@@ -20,39 +25,40 @@
         position: relative;
         width: 300px;
         height: 300px;
-        border: 2px solid black;
-
+        border: 2px solid black;        
       }
       #agent-actions {
-        border: 2px solid black;
-        width: 50%;
+        width: 40%;
+        flex-grow: 1.5;
       }
-      #suggest-actions {
-        border: 2px solid black;
-        width: 300px;
-        height: 300px;
+      #payments-info, #products-info, #sale-info, #retailer-info {
+        
+        width: 40%;
+        height: 400px;
       }
+      
+      
 
       #drop-json-text {
-        height: 100%;
-        width:100%;
+        position: relative;
+        height: 99%;
+        width:99%;
         box-sizing: border-box;
         resize: none;
+        border-radius: 1em;
+        border: none;
+        margin: auto;
       }
+      
 
       ::-webkit-input-placeholder {
         color: #41B04B;
-        font-size: 3em;
+        font-size: 2.5em;
         font-style: italic;
         padding-top: 2em;
+        padding-left: .5em;
       }
       
-      #paste-json {
-        position: absolute;
-        margin-bottom: 1em;
-        bottom: 0;
-      }
-
       #drop-json p {
         width: 100%;
         text-align: center;
@@ -64,36 +70,121 @@
       }
       
       div {
-          margin: 1em;
+          margin: .5em;
       }
+      
+      ul {line-height: 3em;}
 
+      .container {
+          box-shadow: grey 2px 2px 5px 3px;
+          border: .5px solid lightslategray;
+          border-radius: 1em;
+          overflow-y: hidden;
+          background-color: #E4E9EC;
+          
+      }
+      
+      
+      .current-sale {
+          background-color: lightgreen;
+          box-shadow: grey 1px 1px;
+          font-weight: bold;
+      }
+      
+      img {
+        display: inline;
+        height: 50px;      
+        margin-bottom: 0;
+        border-radius: .5em;
+      }
+      
+      h1 {
+          margin-top: 0;
+          font-size: 1.5em;
+          background-color: #41B04B;
+          color: white;
+      }
+      
+      h3 {
+          position: relative;
+          text-align: center;
+          margin: 0 0 0.5em 0;
+          box-sizing: border-box;
+          background-color: #3D4A54;
+          border-radius: 1em 1em 0 0;
+          padding: .5em;
+          color: #D6D7D9;
+      }
+      
+      tr td:first-child {
+          font-weight: bold;
+          text-align: right;
+          padding-right: 1em;
+      }
+      
+      
+      button {
+          border-radius: .5em;
+      }
+      
+      li {
+          margin-left: 1em;
+      }
+      
+      table {
+          margin-left: 2em;
+          line-height: 2.5em;
+      }
+      
   </style>
 
 </head>
 
 <body>
   <header>
-      <h1>Vend Errored Sale Processor</h1>
+      <img src="https://blog.vendhq.com/wp-content/uploads/2015/12/Social-Media_Linkedin-profile-400x250.png" alt="vendlogo">
+      <h1>Errored Sale Processor</h1>
+    <div id="view-errored-sale">View Errored Sale: </div>
   </header>
 
-  <div class="main-container">
-    <div id="drop-json">
-      <textarea id="drop-json-text" placeholder="DRAG AND DROP JSON FILE OR TEXT"></textarea>
+  <div class="main-container" id="main">
+    <div class="container" id="drop-json">
+      <textarea id="drop-json-text" placeholder="DRAG AND DROP JSON FILE OR TEXT or PASTE"></textarea>
     </div>
-    <div id="agent-actions"></div>
-    <div id="suggest-actions"></div>
+      <div class="container" id="agent-actions">
+          <h3>Key Summary</h3>
+      </div>
+      
+      <div class="container" id="sale-info">
+          <h3>Sales Details</h3>
+      </div>
+    <div class="container" id="products-info">
+        <h3>Product Details</h3>
+    </div>
+      <div class="container" id="payments-info">
+          <h3>Payments Details</h3>
+      </div>
   </div>
 
   <textarea style="display:none" id='temp'></textarea>
 
 
   <script>
-
+      var erroredSalesJson;
+      var importantSalesData;
+      var retailer;
+      var saleBtns = [];
       // getElem("paste-json").addEventListener("click", pasteJsonString);
       
       //add listeners
-      getElem("drop-json-text").addEventListener("change", function(){
-          processErroredSaleJson(JSON.parse(this.value));
+      getElem("drop-json-text").addEventListener("paste", function(e){
+          try {
+              processErroredSaleJson(JSON.parse(e.clipboardData.getData('text')));
+          } catch(e) {
+              console.log("Invalid JSON string.");
+              console.log(e.message);
+          }
+          
       });
 
       function getElem(id) {
@@ -114,6 +205,7 @@
             reader.onloadend = function() {                
                 if (this.result)
                 var data = JSON.parse(this.result);
+                getElem('drop-json-text').innerHTML = this.result;
                 callback(data);
             };
             
@@ -123,6 +215,7 @@
                 case 0:
                     // drag and drop json string, for ipad errored sales
                     callback(JSON.parse(dataTransfer.getData('Text')));
+                    getElem('drop-json-text').innerHTML = dataTransfer.getData('Text');
                     break;
                 case 1:
                     // file dropped no error checking at the moment
@@ -139,18 +232,22 @@
         getElem("drop-json-text"),
         function(data) {
             // dropped - do something with data
-           console.log("in dropjson");
+           //console.log("in dropjson");           
            processErroredSaleJson(data);
         }
       );
 
       function processErroredSaleJson(data) {
           console.log(data);
+          erroredSalesJson = data;
+          clearAnyExistingInfo();
           
           retailer = {
               domain: data.domainPrefix,
               id: data.retailerId
           };
+          
+          this.retailer = retailer;
           
           eSales = data.erroredSales; //this is an array
           
@@ -159,10 +256,12 @@
               receiptNumberDetails : [],
               customer_id : [],
               displayStatus : [],
-              lineItems: []
+              lineItems: [],
+              finals: [],
+              registerId: []
           };
           
-          
+          importantSalesData = saleData;         
           
           eSales.forEach(function(sale) {
               Object.keys(saleData).forEach(function(key) {
@@ -170,25 +269,83 @@
               });
           });
           
+          numSales = eSales.length;
+          
+          setNumberOfSales(numSales);
+          
           processDataToPage(saleData, retailer);
           
           console.log(saleData);
           
           //MOST OF THESE ARE ARRAYS AS THEY CAN HAVE MORE THAN ONE SALE, PAYMENT ETC.
-      }
+    }
+      
+    function setNumberOfSales(numSales) {
+        // create buttons for each existing errored sale
+        if (erroredSalesJson) {
+            console.log('btn');
+            var viewError = getElem("view-errored-sale");
+            for (var i = 0; i < numSales; i++) {
+                var btn = document.createElement("button");
+                btn.setAttribute("value", i);
+                btn.appendChild(document.createTextNode(i));
+                viewError.appendChild(btn);
+                saleBtns.push(btn);
+                
+                btn.addEventListener("click", function(){
+                    console.log(this.value);
+                    clearAnyExistingInfo();
+                    processDataToPage(importantSalesData, retailer, this.value);
+                    this.className = "current-sale";
+                    this.disabled = true;
+                    resetBtns(this.value);
+                });
+            }
+        }
+        //default is first sale when loaded
+        saleBtns[0].className = "current-sale";
+        saleBtns[0].disabled = true;
+    }
+    
+    function resetBtns(exclude) {
+        for (var i = 0; i < saleBtns.length; i++) {
+            if (i != exclude) {
+                saleBtns[i].className = "";
+                saleBtns[i].disabled = false;
+            }
+        }
+    }
+      
+     function clearAnyExistingInfo() {
+         var elems = getElem("main");
+         var divs = elems.getElementsByTagName("div");
+         var headers = ["", "Key Summary", "Sale Details", "Product Details", "Payment Details"];
+         
+         console.log(divs);
+         for (var i = 1; i < divs.length; i++) {
+             divs[i].innerHTML = '';
+             
+             header = document.createElement("h3");
+             header.appendChild(document.createTextNode(headers[i]));
+             divs[i].appendChild(header);
+         }
+         
+         saleBtns = [];
+     }
 
       function getJson(jsonString) {
           return JSON.parse(jsonString);
       }
       
-    function processDataToPage(saleData, retailer) {
+    function processDataToPage(saleData, retailer, saleIndex) {
+        console.log(saleData);
           processRetailerInfo(retailer);
           
           //process agent action suggestions
-          processAgentActions(saleData);
+          processAgentActions(saleData, saleIndex);
           
           //process sale info
-          
+          processSaleInfo(saleData, saleIndex);
           
           //process products
           
@@ -196,37 +353,65 @@
           //process payments
     }
     
+    function processSaleInfo(saleData, saleIndex) {
+        i = saleIndex || 0;
+        var sale = {};
+        sale['Retailer'] = getLink("https://backend.vendhq.com/redirect/" + retailer.domain, retailer.domain);
+        sale['Register'] = saleData['registerId'][i];
+        
+        var receipt =saleData['receiptNumberDetails'][i]['number'];
+        receipt = saleData['receiptNumberDetails'][i]['prefix'] + '' +receipt;
+        receipt = receipt + saleData['receiptNumberDetails'][i]['suffix'];
+        sale['Receipt #'] = receipt;
+        
+        sale['Customer'] = saleData['customer_id'][i];        
+        sale['Subtotal'] = saleData['finals'][i]['subtotal'];
+        sale['Status'] = saleData['displayStatus'][i];
+        
+        
+        var table = createTable("salesInfo", getKeys(sale), getValues(sale));
+        
+        getElem("sale-info").appendChild(table);
+        
+    }
+    
     var terms = {
-        "payments" : "Payments",
-        "receiptnumberdetails" : "Receipt Details",
-        "cutomer_id" : "Customer Details",
-        "displaystatus": "Invoice Status",
-        "lineitems" : "Products"            
+        "payments" : ["Payments"],
+        "receiptNumberDetails" : ["Receipt Details", "Sale Details"],
+        "customer_id" : ["Customer Details", "Sale Details"],
+        "displayStatus": ["Invoice Status", "Sale Details"],
+        "lineItems" : ["Products"]
     };
     
-    function processAgentActions(saleData) {
+    function processAgentActions(saleData, saleIndex) {
         var actions = {};
         var keys = getKeys(saleData);
-       
+        var index = saleIndex || 0;
         
         for (var key in saleData) {
             var action;
-            var upperKey = key.toString().toUpperCase();
-            console.log(key);
-            switch (saleData[key].length) {
-                case 0:                    
-                    action = upperKey + " do not exist in this sale.";
-                    break;
-                default:
-                    //these arrays are actually storing each errored sales data
-                    //NEED TO FIGURE OUT LOGIC SO THAT IT ACCOUNTS FOR THE CORRECT SALE
-                    //SIMPLE ARRAY POSITION DEPICTS THE SALE
-                    action = upperKey + " exist in this errored sale. Please see " + upperKey + " section for more details.";
-                    break;
-                
-            }
+            if (key != "finals" && key != "registerId") {
+
+
+                //THE ZERO HERE IS JUST A PLACE HOLDER TO LOOK AT THE FIRST SALE
+                switch (saleData[key][index].length) {
+                    case 0:
+
+                        action = terms[key][0] + " do not exist in this sale.";
+                        break;
+                    default:
+                        //these arrays are actually storing each errored sales data
+                        //NEED TO FIGURE OUT LOGIC SO THAT IT ACCOUNTS FOR THE CORRECT SALE
+                        //SIMPLE ARRAY POSITION DEPICTS THE SALE
+                        action = terms[key][0] + " exist in this errored sale. Please see " 
+                                + (terms[key][1] || terms[key][0]) + " section.";
+                        break;
+
+                }
             
-            actions[key] = action;
+            
+                actions[key] = action;
+            }
         }
         
         displayActions(actions, keys);        
@@ -247,12 +432,21 @@
     }
     
     function processRetailerInfo(retailer) {
-        var labels = getKeys(retailer);
+        
+        var keySummary = document.querySelectorAll("h3")[0];
+        var replacement = document.createElement('h3');
+        
+        replacement.innerHTML = "Key Summary";
+        
+        keySummary.parentNode.replaceChild(replacement, keySummary);
+        
+       
+        /*var labels = getKeys(retailer);
         var values = getValues(retailer);
         
         var table = createTable("retailer", labels, values);
         console.log(table);
-        //getElem('').appendChild(table);
+        getElem('retailer-info').appendChild(table);*/
     }
     
     function getValues(dict) {
@@ -273,7 +467,6 @@
     
         var table = document.createElement("table");
 
-        var cellNum = 0;
         for (var i = 0; i < labels.length; i++){
             var row = document.createElement("tr");
             var td = document.createElement("td");
@@ -285,7 +478,13 @@
             var valTd = document.createElement("td");
             var valText = document.createTextNode(values[i]);
             
-            valTd.appendChild(valText);
+            if (values[i].includes("<")) {
+                valTd.innerHTML = values[i];
+            }  
+            else {
+                valTd.appendChild(valText);
+            }        
+            
             
             row.appendChild(valTd);
             /*for (var cell = 0; cell < values.length; cell++){
@@ -303,6 +502,10 @@
         }
         table.className = name;
         return table;
+    }
+    
+    function getLink(url, text) {
+        return "<a href='" + url + "' target='_blank'>" + text + "</a>"; 
     }
 
   </script>
