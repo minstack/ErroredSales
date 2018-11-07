@@ -31,12 +31,15 @@
         width: 40%;
         flex-grow: 1.5;
       }
-      #payments-info, #products-info, #sale-info, #retailer-info {
+      #payments-info, #products-info, #retailer-info {
 
-        width: 40%;
+        width: 80%;
         height: 400px;
       }
-
+      
+      #sale-info {
+          width: 33%;
+      }
 
 
       #drop-json-text {
@@ -116,10 +119,16 @@
           color: #D6D7D9;
       }
 
-      tr td:first-child {
+      .horizontal tr td:first-child {
           font-weight: bold;
           text-align: right;
           padding-right: 1em;
+      }
+      
+      .db-style {
+          text-align: center;
+          margin: 0 auto;
+          width: 80%;
       }
 
 
@@ -353,6 +362,40 @@
           processProductInfo(saleData, saleIndex);
 
           //process payments
+          processPaymentInfo(saleData, saleIndex);
+    }
+    
+    function processPaymentInfo(saleData, saleIndex){
+        var i = saleIndex || 0;
+        
+        var payments = [];
+        
+        var paymentItem = saleData['payments'][i];
+        
+        //console.log(paymentItem);
+        if (paymentItem && typeof paymentItem !== 'undefined') {
+            
+            //to account for multiple different payments on one sale
+            //most sales would probably have one, but there is definitely a
+            //possibility that customers split the payments with diff types
+            for (var pIndex = 0; pIndex < paymentItem.length; pIndex++) {
+                var tempArr = [];
+                
+                tempArr.push(paymentItem[i]['payment_type_id']);
+                tempArr.push(paymentItem[i]['paymentDate']);
+                tempArr.push(paymentItem[i]['registerId']);
+                tempArr.push(paymentItem[i]['amount']);
+                
+                payments.push(tempArr);
+            }
+                        
+            //may need to add some payment id..not sure which is which id or localid
+        }
+        
+        var tempTHeads = ['Payement Type ID', 'Payment Date', 'Register ID', 'Amount'];
+        
+        getElem('payments-info').appendChild(
+                createDBStyleTable('db-style', tempTHeads, payments));
     }
 
     function processProductInfo(saleData, saleIndex) {
@@ -388,7 +431,7 @@
         sale['Status'] = saleData['displayStatus'][i];
 
 
-        var table = createTable("salesInfo", getKeys(sale), getValues(sale));
+        var table = createTable("horizontal", getKeys(sale), getValues(sale));
 
         getElem("sale-info").appendChild(table);
 
@@ -479,6 +522,42 @@
 
     function getKeys(dict) {
         return Object.keys(dict);
+    }
+
+    function createDBStyleTable(name, headers, recordVals) {
+        var table = document.createElement('table');
+        var row = document.createElement('tr');
+        
+        //headers
+        for (var i = 0; i < headers.length; i++) {
+            var thead = document.createElement('th');
+            var text = document.createTextNode(headers[i]);
+            
+            thead.appendChild(text);
+            row.append(thead);
+        }
+        
+        table.appendChild(row);
+        
+        // can't think of any way to do this in linear time
+        // this is a typical n2 type of situation? or i'm just too lazy to think of most efficient way
+        for (var i = 0; i < recordVals.length; i++) {
+            row = document.createElement('tr');
+            
+            for (var j = 0; j < recordVals[i].length; j++) {
+                var td = document.createElement('td');
+                var text = document.createTextNode(recordVals[i][j]);
+                
+                td.appendChild(text);
+                row.appendChild(td);
+            }
+            
+            table.appendChild(row);
+        }
+        
+        table.className = name;
+        
+        return table;
     }
 
     function createTable(name, labels, values){
