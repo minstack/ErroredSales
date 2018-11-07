@@ -269,7 +269,7 @@
       function processErroredSaleJson(data) {
           //console.log(data);
           erroredSalesJson = data;
-          clearAnyExistingInfo();
+          clearAnyExistingInfo(false);
 
           retailer = {
               domain: data.domainPrefix,
@@ -312,7 +312,7 @@
     function setNumberOfSales(numSales) {
         // create buttons for each existing errored sale
         if (erroredSalesJson) {
-            console.log('btn');
+            
             var viewError = getElem("view-errored-sale");
             for (var i = 0; i < numSales; i++) {
                 var btn = document.createElement("button");
@@ -322,18 +322,19 @@
                 saleBtns.push(btn);
 
                 btn.addEventListener("click", function(){
-                    console.log(this.value);
-                    clearAnyExistingInfo();
+                    //console.log(this.value);
+                    clearAnyExistingInfo(true);
                     processDataToPage(importantSalesData, retailer, this.value);
                     this.className = "current-sale";
                     this.disabled = true;
                     resetBtns(this.value);
                 });
             }
-        }
+        } 
         //default is first sale when loaded
         saleBtns[0].className = "current-sale";
         saleBtns[0].disabled = true;
+        
     }
 
     function resetBtns(exclude) {
@@ -345,7 +346,7 @@
         }
     }
 
-     function clearAnyExistingInfo() {
+     function clearAnyExistingInfo(btnClick) {
          var elems = getElem("main");
          var divs = elems.getElementsByTagName("div");
          var headers = ["", "Key Summary", "Sale Details", "Product Details", "Payment Details"];
@@ -359,14 +360,23 @@
              divs[i].appendChild(header);
          }
 
-         clearButtons();
+         if (!btnClick) {
+             //console.log('clear buttons');
+             clearButtons();
+         } 
          
      }
      
      function clearButtons() {
          var container = getElem('view-errored-sale');
+         var children = container.childNodes;
          
+         console.log(children);
+         for (var i = 1; i < children.length; i++) {
+             container.removeChild(children[i]);
+         }
          
+         saleBtns = [];
      }
 
       function getJson(jsonString) {
