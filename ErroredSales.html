@@ -25,19 +25,19 @@
         position: relative;
         width: 300px;
         height: 300px;
-        border: 2px solid black;        
+        border: 2px solid black;
       }
       #agent-actions {
         width: 40%;
         flex-grow: 1.5;
       }
       #payments-info, #products-info, #sale-info, #retailer-info {
-        
+
         width: 40%;
         height: 400px;
       }
-      
-      
+
+
 
       #drop-json-text {
         position: relative;
@@ -49,7 +49,7 @@
         border: none;
         margin: auto;
       }
-      
+
 
       ::-webkit-input-placeholder {
         color: #41B04B;
@@ -58,7 +58,7 @@
         padding-top: 2em;
         padding-left: .5em;
       }
-      
+
       #drop-json p {
         width: 100%;
         text-align: center;
@@ -68,11 +68,11 @@
         overflow-y: auto;
         padding-top: 2em;
       }
-      
+
       div {
           margin: .5em;
       }
-      
+
       ul {line-height: 3em;}
 
       .container {
@@ -81,30 +81,30 @@
           border-radius: 1em;
           overflow-y: hidden;
           background-color: #E4E9EC;
-          
+
       }
-      
-      
+
+
       .current-sale {
           background-color: lightgreen;
           box-shadow: grey 1px 1px;
           font-weight: bold;
       }
-      
+
       img {
         display: inline;
-        height: 50px;      
+        height: 50px;
         margin-bottom: 0;
         border-radius: .5em;
       }
-      
+
       h1 {
           margin-top: 0;
           font-size: 1.5em;
           background-color: #41B04B;
           color: white;
       }
-      
+
       h3 {
           position: relative;
           text-align: center;
@@ -115,27 +115,27 @@
           padding: .5em;
           color: #D6D7D9;
       }
-      
+
       tr td:first-child {
           font-weight: bold;
           text-align: right;
           padding-right: 1em;
       }
-      
-      
+
+
       button {
           border-radius: .5em;
       }
-      
+
       li {
           margin-left: 1em;
       }
-      
+
       table {
           margin-left: 2em;
           line-height: 2.5em;
       }
-      
+
   </style>
 
 </head>
@@ -154,7 +154,7 @@
       <div class="container" id="agent-actions">
           <h3>Key Summary</h3>
       </div>
-      
+
       <div class="container" id="sale-info">
           <h3>Sales Details</h3>
       </div>
@@ -174,8 +174,10 @@
       var importantSalesData;
       var retailer;
       var saleBtns = [];
+      var productBtns = [];
+      var saleProducts = [];
       // getElem("paste-json").addEventListener("click", pasteJsonString);
-      
+
       //add listeners
       getElem("drop-json-text").addEventListener("paste", function(e){
           try {
@@ -184,31 +186,31 @@
               console.log("Invalid JSON string.");
               console.log(e.message);
           }
-          
+
       });
 
       function getElem(id) {
         return document.getElementById(id);
       }
 
-      
+
       function dropJSON(targetEl, callback) {
         // disable default drag & drop functionality
         targetEl.addEventListener('dragenter', function(e){ e.preventDefault(); });
         targetEl.addEventListener('dragover',  function(e){ e.preventDefault(); });
-      
+
         targetEl.addEventListener('drop', function(event) {
-        
+
             dataTransfer = event.dataTransfer;
-            
+
             var reader = new FileReader();
-            reader.onloadend = function() {                
+            reader.onloadend = function() {
                 if (this.result)
                 var data = JSON.parse(this.result);
                 getElem('drop-json-text').innerHTML = this.result;
                 callback(data);
             };
-            
+
             //either drag drop of json file or json string
             //switch for minimal optimisation
             switch(dataTransfer.files.length) {
@@ -223,8 +225,8 @@
                     reader.readAsText(dataTransfer.files[0]);
                     break;
             }
-            
-            event.preventDefault(); 
+
+            event.preventDefault();
         });
       }
 
@@ -232,7 +234,7 @@
         getElem("drop-json-text"),
         function(data) {
             // dropped - do something with data
-           //console.log("in dropjson");           
+           //console.log("in dropjson");
            processErroredSaleJson(data);
         }
       );
@@ -241,16 +243,16 @@
           console.log(data);
           erroredSalesJson = data;
           clearAnyExistingInfo();
-          
+
           retailer = {
               domain: data.domainPrefix,
               id: data.retailerId
           };
-          
+
           this.retailer = retailer;
-          
+
           eSales = data.erroredSales; //this is an array
-          
+
           saleData = {
               payments : [],
               receiptNumberDetails : [],
@@ -260,26 +262,26 @@
               finals: [],
               registerId: []
           };
-          
-          importantSalesData = saleData;         
-          
+
+          importantSalesData = saleData;
+
           eSales.forEach(function(sale) {
               Object.keys(saleData).forEach(function(key) {
                   saleData[key].push(sale[key]); // for easier manipulation if there are more than 1 errored sale in json
               });
           });
-          
+
           numSales = eSales.length;
-          
+
           setNumberOfSales(numSales);
-          
+
           processDataToPage(saleData, retailer);
-          
+
           console.log(saleData);
-          
+
           //MOST OF THESE ARE ARRAYS AS THEY CAN HAVE MORE THAN ONE SALE, PAYMENT ETC.
     }
-      
+
     function setNumberOfSales(numSales) {
         // create buttons for each existing errored sale
         if (erroredSalesJson) {
@@ -291,7 +293,7 @@
                 btn.appendChild(document.createTextNode(i));
                 viewError.appendChild(btn);
                 saleBtns.push(btn);
-                
+
                 btn.addEventListener("click", function(){
                     console.log(this.value);
                     clearAnyExistingInfo();
@@ -306,7 +308,7 @@
         saleBtns[0].className = "current-sale";
         saleBtns[0].disabled = true;
     }
-    
+
     function resetBtns(exclude) {
         for (var i = 0; i < saleBtns.length; i++) {
             if (i != exclude) {
@@ -315,66 +317,83 @@
             }
         }
     }
-      
+
      function clearAnyExistingInfo() {
          var elems = getElem("main");
          var divs = elems.getElementsByTagName("div");
          var headers = ["", "Key Summary", "Sale Details", "Product Details", "Payment Details"];
-         
+
          console.log(divs);
          for (var i = 1; i < divs.length; i++) {
              divs[i].innerHTML = '';
-             
+
              header = document.createElement("h3");
              header.appendChild(document.createTextNode(headers[i]));
              divs[i].appendChild(header);
          }
-         
+
          saleBtns = [];
      }
 
       function getJson(jsonString) {
           return JSON.parse(jsonString);
       }
-      
+
     function processDataToPage(saleData, retailer, saleIndex) {
         console.log(saleData);
           processRetailerInfo(retailer);
-          
+
           //process agent action suggestions
           processAgentActions(saleData, saleIndex);
-          
+
           //process sale info
           processSaleInfo(saleData, saleIndex);
-          
+
           //process products
-          
-          
+          processProductInfo(saleData, saleIndex);
+
           //process payments
     }
-    
+
+    function processProductInfo(saleData, saleIndex) {
+      var i = saleIndex || 0;
+
+      var products = {};
+      var lineitems = saleData['lineItems'][i];
+
+      if (lineitems && typeof lineitems !== 'undefined') {
+        //products['']
+      }
+    }
+
     function processSaleInfo(saleData, saleIndex) {
-        i = saleIndex || 0;
+        var i = saleIndex || 0;
         var sale = {};
-        sale['Retailer'] = getLink("https://backend.vendhq.com/redirect/" + retailer.domain, retailer.domain);
+        sale['Retailer'] = getLink("https://backend.vendhq.com/retailer_redirect/"
+                              + retailer.domain, retailer.domain);
         sale['Register'] = saleData['registerId'][i];
-        
-        var receipt =saleData['receiptNumberDetails'][i]['number'];
-        receipt = saleData['receiptNumberDetails'][i]['prefix'] + '' +receipt;
-        receipt = receipt + saleData['receiptNumberDetails'][i]['suffix'];
+
+        var receiptDetail = saleData['receiptNumberDetails'][i];
+        var receipt = 'No Receipt';
+
+        if (receiptDetail && typeof receiptDetail !== 'undefined') {
+          receipt = receiptDetail['number'];
+          receipt = receiptDetail['prefix'] + '' +receipt;
+          receipt = receipt + receiptDetail['suffix'];
+        }
+
         sale['Receipt #'] = receipt;
-        
-        sale['Customer'] = saleData['customer_id'][i];        
+        sale['Customer'] = saleData['customer_id'][i];
         sale['Subtotal'] = saleData['finals'][i]['subtotal'];
         sale['Status'] = saleData['displayStatus'][i];
-        
-        
+
+
         var table = createTable("salesInfo", getKeys(sale), getValues(sale));
-        
+
         getElem("sale-info").appendChild(table);
-        
+
     }
-    
+
     var terms = {
         "payments" : ["Payments"],
         "receiptNumberDetails" : ["Receipt Details", "Sale Details"],
@@ -382,18 +401,17 @@
         "displayStatus": ["Invoice Status", "Sale Details"],
         "lineItems" : ["Products"]
     };
-    
+
     function processAgentActions(saleData, saleIndex) {
         var actions = {};
         var keys = getKeys(saleData);
         var index = saleIndex || 0;
-        
+
         for (var key in saleData) {
             var action;
-            if (key != "finals" && key != "registerId") {
+            if (key != "finals" && key != "registerId" && saleData[key][index]
+                  && typeof saleData[key][index] !== 'undefined') {
 
-
-                //THE ZERO HERE IS JUST A PLACE HOLDER TO LOOK AT THE FIRST SALE
                 switch (saleData[key][index].length) {
                     case 0:
 
@@ -403,97 +421,98 @@
                         //these arrays are actually storing each errored sales data
                         //NEED TO FIGURE OUT LOGIC SO THAT IT ACCOUNTS FOR THE CORRECT SALE
                         //SIMPLE ARRAY POSITION DEPICTS THE SALE
-                        action = terms[key][0] + " exist in this errored sale. Please see " 
+                        action = terms[key][0] + " exist in this errored sale. Please see "
                                 + (terms[key][1] || terms[key][0]) + " section.";
                         break;
 
                 }
-            
-            
+
+
                 actions[key] = action;
             }
         }
-        
-        displayActions(actions, keys);        
+
+        displayActions(actions, keys);
     }
-    
+
     function displayActions(actions) {
         //actions expect dict
         var ul = document.createElement("ul");
-        
+
         for (var action in actions) {
             var li = document.createElement("li");
-            
+
             li.appendChild(document.createTextNode(actions[action]));
             ul.appendChild(li);
         }
-        
+
         getElem("agent-actions").append(ul);
     }
-    
+
     function processRetailerInfo(retailer) {
-        
+
         var keySummary = document.querySelectorAll("h3")[0];
         var replacement = document.createElement('h3');
-        
+
         replacement.innerHTML = "Key Summary";
-        
+
         keySummary.parentNode.replaceChild(replacement, keySummary);
-        
-       
+
+
         /*var labels = getKeys(retailer);
         var values = getValues(retailer);
-        
+
         var table = createTable("retailer", labels, values);
         console.log(table);
         getElem('retailer-info').appendChild(table);*/
     }
-    
+
     function getValues(dict) {
         var values = [];
-        
+
         for (var key in dict) {
             values.push(dict[key]);
         }
-        
+
         return values;
     }
-    
+
     function getKeys(dict) {
         return Object.keys(dict);
     }
-    
+
     function createTable(name, labels, values){
-    
+
         var table = document.createElement("table");
 
         for (var i = 0; i < labels.length; i++){
             var row = document.createElement("tr");
             var td = document.createElement("td");
             var text = document.createTextNode(labels[i]);
-            
+
             td.appendChild(text);
             row.appendChild(td);
 
             var valTd = document.createElement("td");
             var valText = document.createTextNode(values[i]);
-            
-            if (values[i].includes("<")) {
-                valTd.innerHTML = values[i];
-            }  
-            else {
-                valTd.appendChild(valText);
-            }        
-            
-            
+
+            if (values[i] && typeof values[i] !== 'undefined') {
+              if (values[i].includes("<")) {
+                  valTd.innerHTML = values[i];
+              }
+              else {
+                  valTd.appendChild(valText);
+              }
+            }
+
             row.appendChild(valTd);
             /*for (var cell = 0; cell < values.length; cell++){
                 var td = document.createElement("td");
                 row.appendChild(td);
-                
+
                 //to refer each cells with cell number
                 //val is there to distinguish mainboard cells and inner cells
-                td.value = val+cellNum; 
+                td.value = val+cellNum;
                 //console.log(td.value);
                 cellNum++;
             }*/
@@ -503,9 +522,9 @@
         table.className = name;
         return table;
     }
-    
+
     function getLink(url, text) {
-        return "<a href='" + url + "' target='_blank'>" + text + "</a>"; 
+        return "<a href='" + url + "' target='_blank'>" + text + "</a>";
     }
 
   </script>
