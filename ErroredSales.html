@@ -7,7 +7,7 @@
   <title>Vend Errored Sales</title>
 
   <style>
-      body{ font-family: sans-serif, "Calibri"; }
+      body{ font-family: "Calibri", sans-serif; }
       header {
           margin: auto;
           text-align: center;
@@ -16,7 +16,7 @@
         display: flex;
         flex-wrap: wrap;
         flex-direction: row;
-        justify-content: flex-end;
+        justify-content: flex-start;
         align-content:space-between;
 
       }
@@ -31,10 +31,8 @@
         width: 40%;
         flex-grow: 1.5;
       }
-      #payments-info, #products-info, #retailer-info {
-
+      #payments-info, #products-info{
         width: 80%;
-        height: 400px;
       }
       
       #sale-info {
@@ -80,13 +78,11 @@
 
       .container {
           box-shadow: grey 2px 2px 5px 3px;
-          border: .5px solid lightslategray;
+          border: 1px solid lightslategray;
           border-radius: 1em;
           overflow-y: hidden;
           background-color: #E4E9EC;
-
       }
-
 
       .current-sale {
           background-color: lightgreen;
@@ -103,7 +99,7 @@
 
       h1 {
           margin-top: 0;
-          font-size: 1.5em;
+          font-size: 2em;
           background-color: #41B04B;
           color: white;
       }
@@ -117,6 +113,7 @@
           border-radius: 1em 1em 0 0;
           padding: .5em;
           color: #D6D7D9;
+          font-size: 1.4em;
       }
 
       .horizontal tr td:first-child {
@@ -128,7 +125,7 @@
       .db-style {
           text-align: center;
           margin: 0 auto;
-          width: 80%;
+          width: 85%;
       }
 
 
@@ -143,6 +140,29 @@
       table {
           margin-left: 2em;
           line-height: 2.5em;
+          table-layout: auto;
+      }
+      
+      @media screen and (min-width: 1350px) {
+          .main-container{
+              justify-content: flex-end;
+          }
+      }
+      
+      @media screen and (max-width: 1349px) {
+          #drop-json {
+              position: absolute;
+              bottom: 0;
+              right: 0;
+              height: 200px;
+              width: 18%;
+          }
+          
+          ::-webkit-input-placeholder {
+            font-size: 1.1em;    
+            text-align: center;
+            padding: 4em 0;
+          }
       }
 
   </style>
@@ -183,8 +203,6 @@
       var importantSalesData;
       var retailer;
       var saleBtns = [];
-      var productBtns = [];
-      var saleProducts = [];
       // getElem("paste-json").addEventListener("click", pasteJsonString);
 
       //add listeners
@@ -249,7 +267,7 @@
       );
 
       function processErroredSaleJson(data) {
-          console.log(data);
+          //console.log(data);
           erroredSalesJson = data;
           clearAnyExistingInfo();
 
@@ -332,7 +350,7 @@
          var divs = elems.getElementsByTagName("div");
          var headers = ["", "Key Summary", "Sale Details", "Product Details", "Payment Details"];
 
-         console.log(divs);
+         //console.log(divs);
          for (var i = 1; i < divs.length; i++) {
              divs[i].innerHTML = '';
 
@@ -341,7 +359,14 @@
              divs[i].appendChild(header);
          }
 
-         saleBtns = [];
+         clearButtons();
+         
+     }
+     
+     function clearButtons() {
+         var container = getElem('view-errored-sale');
+         
+         
      }
 
       function getJson(jsonString) {
@@ -381,10 +406,10 @@
             for (var pIndex = 0; pIndex < paymentItem.length; pIndex++) {
                 var tempArr = [];
                 
-                tempArr.push(paymentItem[i]['payment_type_id']);
-                tempArr.push(paymentItem[i]['paymentDate']);
-                tempArr.push(paymentItem[i]['registerId']);
-                tempArr.push(paymentItem[i]['amount']);
+                tempArr.push(paymentItem[pIndex]['payment_type_id']);
+                tempArr.push(paymentItem[pIndex]['paymentDate']);
+                tempArr.push(paymentItem[pIndex]['registerId']);
+                tempArr.push(getMoney(paymentItem[pIndex]['amount']));
                 
                 payments.push(tempArr);
             }
@@ -398,15 +423,36 @@
                 createDBStyleTable('db-style', tempTHeads, payments));
     }
 
+    //this and above function could probably be refactored to have one general
+    //function and call those functions with more arguments..but right now
+    //unsure of if there will be the same number of columns/keys
     function processProductInfo(saleData, saleIndex) {
       var i = saleIndex || 0;
 
-      var products = {};
+      var products = [];
       var lineitems = saleData['lineItems'][i];
 
       if (lineitems && typeof lineitems !== 'undefined') {
-        //products['']
+        
+        for (var pIndex = 0; pIndex < lineitems.length; pIndex++) {
+            var tempArr = [];
+
+            tempArr.push(lineitems[pIndex]['localId']);
+            tempArr.push(lineitems[pIndex]['quantity']);
+            
+            var price = lineitems[pIndex]['totals']['exclusivePrice'] 
+                            || lineitems[pIndex]['totals']['inclusivePrice'];
+            tempArr.push(getMoney(price));
+            tempArr.push(getMoney(lineitems[pIndex]['totals']['tax']));
+
+            products.push(tempArr);
+        }        
       }
+      
+      var tempTHeads = ['Local ID', 'Quantity', 'Price', 'Tax'];
+        
+        getElem('products-info').appendChild(
+                createDBStyleTable('db-style', tempTHeads, products));
     }
 
     function processSaleInfo(saleData, saleIndex) {
@@ -426,8 +472,9 @@
         }
 
         sale['Receipt #'] = receipt;
-        sale['Customer'] = saleData['customer_id'][i];
-        sale['Subtotal'] = saleData['finals'][i]['subtotal'];
+        sale['Customer'] = saleData['customer_id'][i];       
+        sale['Total'] = getMoney(parseFloat((saleData['finals'][i]['subtotal'])) 
+                            + parseFloat(saleData['finals'][i]['tax']));
         sale['Status'] = saleData['displayStatus'][i];
 
 
@@ -444,6 +491,10 @@
         "displayStatus": ["Invoice Status", "Sale Details"],
         "lineItems" : ["Products"]
     };
+    
+    function getMoney(strNum) {
+        return parseFloat(strNum).toFixed(2);
+    }
 
     function processAgentActions(saleData, saleIndex) {
         var actions = {};
