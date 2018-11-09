@@ -294,7 +294,7 @@
             receiptNumberDetails : [],
             customer_id : [],
             displayStatus : [],
-            lineItems: [],
+            saleItems: [],
             finals: [],
             registerId: []
         };
@@ -406,7 +406,6 @@
     function processDataToPage(saleData, retailer, saleIndex) {
        // console.log(saleData);
         processRetailerInfo(retailer);
-
         //process agent action suggestions
         processAgentActions(saleData, saleIndex);
 
@@ -462,27 +461,26 @@
       var i = saleIndex || 0;
 
       var products = [];
-      var lineitems = saleData['lineItems'][i];
+      var lineitems = saleData['saleItems'][i];
 
       if (lineitems && typeof lineitems !== 'undefined') {
         
         for (var pIndex = 0; pIndex < lineitems.length; pIndex++) {
             var tempArr = [];
 
-            tempArr.push(lineitems[pIndex]['localId']);
+            tempArr.push(lineitems[pIndex]['product_id']);
             tempArr.push(lineitems[pIndex]['quantity']);
             
-            //dependant on whether the store is exclusive/inclusive tax?
-            var price = lineitems[pIndex]['totals']['exclusivePrice'] 
-                            || lineitems[pIndex]['totals']['inclusivePrice'];
+            
+            var price = lineitems[pIndex]['price'];
             tempArr.push(getMoney(price));
-            tempArr.push(getMoney(lineitems[pIndex]['totals']['tax']));
+            tempArr.push(getMoney(lineitems[pIndex]['tax']));
 
             products.push(tempArr);
         }        
       }
       
-      var tempTHeads = ['Local ID', 'Quantity', 'Price', 'Tax'];
+      var tempTHeads = ['Product ID', 'Quantity', 'Price', 'Tax'];
         
         getElem('products-info').appendChild(
                 createDBStyleTable('db-style', tempTHeads, products));
@@ -530,7 +528,7 @@
         "receiptNumberDetails" : ["Receipt Details", "Sale Details"],
         "customer_id" : ["Customer Details", "Sale Details"],
         "displayStatus": ["Invoice Status", "Sale Details"],
-        "lineItems" : ["Products"]
+        "saleItems" : ["Products"]
     };
 
     // Outputs to Key Summary whether products, payments, customer, receipt,
