@@ -34,7 +34,7 @@
       #payments-info, #products-info{
         width: 80%;
       }
-      
+
       #sale-info {
           width: 33%;
       }
@@ -121,7 +121,7 @@
           text-align: right;
           padding-right: 1em;
       }
-      
+
       .db-style {
           text-align: center;
           margin: 0 auto;
@@ -142,13 +142,20 @@
           line-height: 2.5em;
           table-layout: auto;
       }
-      
+
+      .notification {
+          font-size: .7em;
+          color: red;
+          border: 1px solid black;
+          box-shadow: 2px grey;
+      }
+
       @media screen and (min-width: 1350px) {
           .main-container{
               justify-content: flex-end;
           }
       }
-      
+
       @media screen and (max-width: 1349px) {
           #drop-json {
               position: absolute;
@@ -157,9 +164,9 @@
               height: 200px;
               width: 18%;
           }
-          
+
           ::-webkit-input-placeholder {
-            font-size: 1.1em;    
+            font-size: 1.1em;
             text-align: center;
             padding: 4em 0;
           }
@@ -175,7 +182,12 @@
       <h1>Errored Sale Processor</h1>
     <div id="view-errored-sale">View Errored Sale: </div>
   </header>
-
+  <div class="notification">
+    NOTE: Please refer to <a href="https://vendhelp.zendesk.com/agent/tickets/350218" target="_blank">this PT</a>
+    <br/>TLDR: Any errored sale that has NULL or " " in an area such as register_id, user_id, or invoice_number will not upload.
+    <br/>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;The PT indicates those tickets should be tagged as an incident.
+    <br/>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Ultimately causing the errored sale.  Please still notify the retailer with the information you gather here.
+  </div>
   <div class="main-container" id="main">
     <div class="container" id="drop-json">
       <textarea id="drop-json-text" placeholder="DRAG AND DROP JSON FILE OR TEXT or PASTE"></textarea>
@@ -234,7 +246,7 @@
           dataTransfer = event.dataTransfer;
 
           var reader = new FileReader();
-          
+
           //gets called after the file/text is loaded in case 1 below
           //this anon function gets called after reader.readAsText completes
           reader.onloadend = function() {
@@ -243,7 +255,7 @@
                 getElem('drop-json-text').innerHTML = this.result;
                 callback(data);
               }
-              
+
           };
 
           //either drag drop of json file or json string
@@ -265,7 +277,7 @@
           event.preventDefault();
       });
     }
-    
+
     dropJSON(
       getElem("drop-json-text"),
       function(data) {
@@ -280,38 +292,72 @@
         erroredSalesJson = data;
         clearAnyExistingInfo(false);
 
+        webversion = "erroredSales" in data;
+
         retailer = {
             domain: data.domainPrefix,
             id: data.retailerId
         };
 
         this.retailer = retailer;
-
-        eSales = data.erroredSales; //this is an array
+        
+        
+        eSales = (webversion) ? data.erroredSales : data;
+        //eSales = data.erroredSales; //this is an array
 
         saleData = {
             payments : [],
             receiptNumberDetails : [],
             customer_id : [],
             displayStatus : [],
-            saleItems: [],
+            lineItems: [],
             finals: [],
             registerId: []
         };
+
+        // webIosKeyMap = {
+        //     payments: "register_sale_payments",
+        //     receiptNumberDetails : "invoice_number",
+        //     customer_id : "customer_id",
+        //     displayStatus : "status",
+        //     saleItems: "register_sale_products",
+        //     registerId: "register_id"
+        // };
+        webIosKeyMap = {
+            payments: "payments",
+            receiptNumberDetails : "receiptNumberDetails",
+            customer_id : "customer_id",
+            displayStatus : "status",
+            lineItems: "lineItems",
+            registerId: "register_id"
+        };
+
 
         importantSalesData = saleData;
 
         eSales.forEach(function(sale) {
             Object.keys(saleData).forEach(function(key) {
-                saleData[key].push(sale[key]); // for easier manipulation if there are more than 1 errored sale in json
+                if (!webversion) {
+                    currData = sale[webIosKeyMap[key]];
+                    if (key == "finals") {
+                        currData = {
+                            subtotal: sale.total_price,
+                            tax : sale.total_tax
+                        };
+                    }
+                    console.log('in not web');
+                } else {
+                    currData = sale[key];
+                }
+                saleData[key].push(currData); // for easier manipulation if there are more than 1 errored sale in json
             });
         });
-
+        console.log(saleData)
         numSales = eSales.length;
 
-        setNumberOfSales(numSales);
+        setNumberOfSales(numSales, webversion);
 
-        processDataToPage(saleData, retailer);
+        processDataToPage(saleData, retailer, 0, webversion);
 
         console.log(saleData);
 
@@ -319,11 +365,11 @@
     }
 
     // creates the buttons based on the number of sales in the JSON
-    // adds the click event listeners and starts at 0. 
-    function setNumberOfSales(numSales) {
+    // adds the click event listeners and starts at 0.
+    function setNumberOfSales(numSales, webversion) {
         // create buttons for each existing errored sale
         if (erroredSalesJson) {
-            
+
             var viewError = getElem("view-errored-sale");
             for (var i = 0; i < numSales; i++) {
                 var btn = document.createElement("button");
@@ -335,17 +381,17 @@
                 btn.addEventListener("click", function(){
                     //console.log(this.value);
                     clearAnyExistingInfo(true);
-                    processDataToPage(importantSalesData, retailer, this.value);
+                    processDataToPage(importantSalesData, retailer, this.value, webversion);
                     this.className = "current-sale";
                     this.disabled = true;
                     resetBtns(this.value);
                 });
             }
-        } 
+        }
         //default is first sale when loaded
         saleBtns[0].className = "current-sale";
         saleBtns[0].disabled = true;
-        
+
     }
 
     // Enables all buttons except the provided.
@@ -379,10 +425,10 @@
          if (!btnClick) {
              //console.log('clear buttons');
              clearButtons();
-         } 
-         
+         }
+
      }
-     
+
     //Called when new json is dropped or pasted to be parsed
     function clearButtons() {
         var container = getElem('view-errored-sale');
@@ -403,7 +449,7 @@
 
     //main logic to display all the information to page to the corresponding
     //containers
-    function processDataToPage(saleData, retailer, saleIndex) {
+    function processDataToPage(saleData, retailer, saleIndex, webversion) {
        // console.log(saleData);
         processRetailerInfo(retailer);
         //process agent action suggestions
@@ -416,40 +462,48 @@
         processProductInfo(saleData, saleIndex);
 
         //process payments
-        processPaymentInfo(saleData, saleIndex);
+        processPaymentInfo(saleData, saleIndex, webversion);
     }
-    
+
     //displays payment information to the corresponding container in a db-style
     //table to account for multiple payments in a sale if they exist
-    function processPaymentInfo(saleData, saleIndex){
+    function processPaymentInfo(saleData, saleIndex, webversion){
         var i = saleIndex || 0;
-        
+
         var payments = [];
-        
+
         var paymentItem = saleData['payments'][i];
-        
+
         //console.log(paymentItem);
         if (paymentItem && typeof paymentItem !== 'undefined') {
-            
+
             //to account for multiple different payments on one sale
             //most sales would probably have one, but there is definitely a
             //possibility that customers split the payments with diff types
             for (var pIndex = 0; pIndex < paymentItem.length; pIndex++) {
                 var tempArr = [];
-                
-                tempArr.push(paymentItem[pIndex]['payment_type_id']);
-                tempArr.push(paymentItem[pIndex]['paymentDate']);
-                tempArr.push(paymentItem[pIndex]['registerId']);
-                tempArr.push(getMoney(paymentItem[pIndex]['amount']));
+
+                if (webversion) {
+                    tempArr.push(paymentItem[pIndex]['payment_type_id']);
+                    tempArr.push(paymentItem[pIndex]['paymentDate']);
+                    tempArr.push(paymentItem[pIndex]['registerId']);
+                    tempArr.push(getMoney(paymentItem[pIndex]['amount']));
+                } else {
+                    tempArr.push(paymentItem[pIndex]['retailer_payment_type_id']);
+                    tempArr.push(paymentItem[pIndex]['payment_date']);
+                    tempArr.push(paymentItem[pIndex]['register_id']);
+                    tempArr.push(getMoney(paymentItem[pIndex]['amount']));
+                }
+
                 
                 payments.push(tempArr);
             }
-                        
+
             //may need to add some payment id..not sure which is which id or localid
         }
-        
+
         var tempTHeads = ['Payement Type ID', 'Payment Date', 'Register ID', 'Amount'];
-        
+
         getElem('payments-info').appendChild(
                 createDBStyleTable('db-style', tempTHeads, payments));
     }
@@ -461,31 +515,35 @@
       var i = saleIndex || 0;
 
       var products = [];
-      var lineitems = saleData['saleItems'][i];
+    //   var lineitems = saleData['saleItems'][i];
+      var lineitems = saleData['lineItems'][i];
 
       if (lineitems && typeof lineitems !== 'undefined') {
-        
+
         for (var pIndex = 0; pIndex < lineitems.length; pIndex++) {
             var tempArr = [];
 
             tempArr.push(lineitems[pIndex]['product_id']);
             tempArr.push(lineitems[pIndex]['quantity']);
-            
-            
-            var price = lineitems[pIndex]['price'];
+
+            // var price = lineitems[pIndex]['price'];
+            // tempArr.push(getMoney(price));
+            // tempArr.push(getMoney(lineitems[pIndex]['tax']));
+            var price = lineitems[pIndex]['totals']['exclusivePrice'];
             tempArr.push(getMoney(price));
-            tempArr.push(getMoney(lineitems[pIndex]['tax']));
+            tempArr.push(getMoney(lineitems[pIndex]['totals']['tax']));
+
 
             products.push(tempArr);
-        }        
+        }
       }
-      
+
       var tempTHeads = ['Product ID', 'Quantity', 'Price', 'Tax'];
-        
+
         getElem('products-info').appendChild(
                 createDBStyleTable('db-style', tempTHeads, products));
     }
-    
+
     // Displays the sale information, if it exist with link to retailer backend
     function processSaleInfo(saleData, saleIndex) {
         var i = saleIndex || 0;
@@ -497,38 +555,47 @@
         var receiptDetail = saleData['receiptNumberDetails'][i];
         var receipt = 'No Receipt';
 
-        if (receiptDetail && typeof receiptDetail !== 'undefined') {
-          receipt = receiptDetail['number'];
-          receipt = receiptDetail['prefix'] + '' +receipt;
-          receipt = receipt + receiptDetail['suffix'];
+        if (typeof receiptDetail !== 'string') {
+            if (receiptDetail && typeof receiptDetail !== 'undefined') {
+                receipt = receiptDetail['number'];
+                receipt = receiptDetail['prefix'] + '' +receipt;
+                receipt = receipt + receiptDetail['suffix'];
+                console.log('in receiptDetail', receipt);
+            }
+            
+        } else {
+            receipt = receiptDetail
         }
+        
+        console.log(saleIndex, saleData)
 
         sale['Receipt #'] = receipt;
-        sale['Customer'] = saleData['customer_id'][i];       
-        sale['Total'] = getMoney(parseFloat((saleData['finals'][i]['subtotal'])) 
+        //sale['Receipt #'] = receiptDetail;
+        sale['Customer'] = saleData['customer_id'][i];
+        sale['Total'] = getMoney(parseFloat((saleData['finals'][i]['subtotal']))
                             + parseFloat(saleData['finals'][i]['tax']));
         sale['Status'] = saleData['displayStatus'][i];
 
-
+        console.log(sale);
         var table = createTable("horizontal", getKeys(sale), getValues(sale));
 
         getElem("sale-info").appendChild(table);
 
     }
 
-    
+
     // Returns a string version of float, formatted to 2 decimals
     function getMoney(strNum) {
         return parseFloat(strNum).toFixed(2);
     }
 
-    
+
     var terms = {
         "payments" : ["Payments"],
         "receiptNumberDetails" : ["Receipt Details", "Sale Details"],
         "customer_id" : ["Customer Details", "Sale Details"],
         "displayStatus": ["Invoice Status", "Sale Details"],
-        "saleItems" : ["Products"]
+        "lineItems" : ["Products"]
     };
 
     // Outputs to Key Summary whether products, payments, customer, receipt,
@@ -544,7 +611,7 @@
         for (var key in saleData) {
             var action;
             var currData = saleData[key][index];
-            
+
             // prevent any null or undefined errors
             if (key != "finals" && key != "registerId" && currData
                   && typeof currData !== 'undefined') {
@@ -558,6 +625,7 @@
                         //these arrays are actually storing each errored sales data
                         //NEED TO FIGURE OUT LOGIC SO THAT IT ACCOUNTS FOR THE CORRECT SALE
                         //SIMPLE ARRAY POSITION DEPICTS THE SALE
+                        console.log(key);
                         action = terms[key][0] + " exist in this errored sale. Please see "
                                 + (terms[key][1] || terms[key][0]) + " section.";
                         break;
@@ -626,36 +694,36 @@
     function createDBStyleTable(name, headers, recordVals) {
         var table = document.createElement('table');
         var row = document.createElement('tr');
-        
+
         //headers
         for (var i = 0; i < headers.length; i++) {
             var thead = document.createElement('th');
             var text = document.createTextNode(headers[i]);
-            
+
             thead.appendChild(text);
             row.append(thead);
         }
-        
+
         table.appendChild(row);
-        
+
         // can't think of any way to do this in linear time
         // this is a typical n2 type of situation? or i'm just too lazy to think of most efficient way
         for (var i = 0; i < recordVals.length; i++) {
             row = document.createElement('tr');
-            
+
             for (var j = 0; j < recordVals[i].length; j++) {
                 var td = document.createElement('td');
                 var text = document.createTextNode(recordVals[i][j]);
-                
+
                 td.appendChild(text);
                 row.appendChild(td);
             }
-            
+
             table.appendChild(row);
         }
-        
+
         table.className = name;
-        
+
         return table;
     }
 
@@ -674,7 +742,7 @@
 
             var valTd = document.createElement("td");
             var valText = document.createTextNode(values[i]);
-
+            //console.log(values)
             if (values[i] && typeof values[i] !== 'undefined') {
               if (values[i].includes("<")) {
                   valTd.innerHTML = values[i];
