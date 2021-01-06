@@ -324,13 +324,21 @@
         //     registerId: "register_id"
         // };
         webIosKeyMap = {
-            payments: "payments",
-            receiptNumberDetails : "receiptNumberDetails",
+            payments: "register_sale_payments",
+            receiptNumberDetails : "invoice_number",
             customer_id : "customer_id",
             displayStatus : "status",
-            lineItems: "lineItems",
+            lineItems: "register_sale_products",
             registerId: "register_id"
         };
+        // webIosKeyMap = {
+        //     payments: "register_sale_payments",
+        //     receiptNumberDetails : "invoice_number",
+        //     customer_id : "customer_id",
+        //     displayStatus : "status",
+        //     lineItems: "lineItems",
+        //     registerId: "register_id"
+        // };
 
 
         importantSalesData = saleData;
@@ -517,6 +525,8 @@
       var products = [];
     //   var lineitems = saleData['saleItems'][i];
       var lineitems = saleData['lineItems'][i];
+      console.log('processProductInfo');
+      console.log(lineitems);
 
       if (lineitems && typeof lineitems !== 'undefined') {
 
@@ -526,12 +536,12 @@
             tempArr.push(lineitems[pIndex]['product_id']);
             tempArr.push(lineitems[pIndex]['quantity']);
 
-            // var price = lineitems[pIndex]['price'];
-            // tempArr.push(getMoney(price));
-            // tempArr.push(getMoney(lineitems[pIndex]['tax']));
-            var price = lineitems[pIndex]['totals']['exclusivePrice'];
+            var price = lineitems[pIndex]['price'];
             tempArr.push(getMoney(price));
-            tempArr.push(getMoney(lineitems[pIndex]['totals']['tax']));
+            tempArr.push(getMoney(lineitems[pIndex]['tax']));
+            // var price = lineitems[pIndex]['totals']['exclusivePrice'];
+            // tempArr.push(getMoney(price));
+            // tempArr.push(getMoney(lineitems[pIndex]['totals']['tax']));
 
 
             products.push(tempArr);
